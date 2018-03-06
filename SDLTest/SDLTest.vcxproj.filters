@@ -1,0 +1,84 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Archivos de código fuente">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Archivos de encabezado">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Archivos de recursos">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Archivos de código fuente\External">
+      <UniqueIdentifier>{874d3c83-474a-4bd6-9ee6-eb6f4eb93d71}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Archivos de encabezado\External">
+      <UniqueIdentifier>{6b938d2f-140a-4652-9e47-801315446402}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{b32b11b5-4193-4745-880f-87e40153b91d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\Demo_OGL_III">
+      <UniqueIdentifier>{b56c8ffd-32c0-4d62-b15c-b39d13990f76}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Archivos de código fuente\Kernels">
+      <UniqueIdentifier>{9a88e0c2-b688-4bc3-8687-fb445614d009}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\main.cpp">
+      <Filter>Archivos de código fuente</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Utils\LoadShaders.cpp">
+      <Filter>Archivos de código fuente\External</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Libs\gl3w\src\gl3w.c">
+      <Filter>Archivos de código fuente\External</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Demo_OGL_III\Demo_OGL_3ocl.cpp">
+      <Filter>Archivos de código fuente</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Utils\LoadKernel.cpp">
+      <Filter>Archivos de código fuente\External</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\Utils\Info_Manager.h">
+      <Filter>Archivos de encabezado\External</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Utils\LoadShaders.h">
+      <Filter>Archivos de encabezado\External</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Utils\vmath.h">
+      <Filter>Archivos de encabezado\External</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Utils\SDL_OGL_GL3W_Dev_GeneralInclude.h">
+      <Filter>Archivos de encabezado\External</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Demo_OGL_III\Demo_OGL_3ocl.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Utils\LoadKernels.h">
+      <Filter>Archivos de encabezado\External</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Shaders\Demo_OGL_III\fog.fs.glsl">
+      <Filter>Shaders\Demo_OGL_III</Filter>
+    </None>
+    <None Include="..\Shaders\Demo_OGL_III\geometry_instancingB.vs.glsl">
+      <Filter>Shaders\Demo_OGL_III</Filter>
+    </None>
+    <None Include="..\Shaders\Demo_OGL_III\simple.fs.glsl">
+      <Filter>Shaders\Demo_OGL_III</Filter>
+    </None>
+    <None Include="ClassDiagram.cd" />
+    <None Include="..\Kernels\moveElements.cl">
+      <Filter>Archivos de código fuente\Kernels</Filter>
+    </None>
+  </ItemGroup>
+</Project>
