@@ -305,66 +305,81 @@ void Demo_OGL_3OCL::InitData(){
 }
 
 void Demo_OGL_3OCL::InitCLData() {
-    printf("\nInitializing OCL Data\n");
+    explosion_pos = { 0.0f, 0.0f, -10.0f };
 
-    cl_device_id device_id = NULL;
-    cl_uint ret_num_devices;
-    cl_uint ret_num_platforms;
+#if USE_OPENCL_KERNELS
+    {
+        printf("\nInitializing OCL Data\n");
 
-    cl_int ret = clGetPlatformIDs(0, NULL, &ret_num_platforms);
-    cl_platform_id *platforms = NULL;
-    platforms = (cl_platform_id*)malloc(ret_num_platforms * sizeof(cl_platform_id));
+        cl_device_id device_id = NULL;
+        cl_uint ret_num_devices;
+        cl_uint ret_num_platforms;
 
-    ret = clGetPlatformIDs(ret_num_platforms, platforms, NULL);
-    ret = clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_DEFAULT, 1, &device_id, &ret_num_devices);
+        cl_int ret = clGetPlatformIDs(0, NULL, &ret_num_platforms);
+        cl_platform_id *platforms = NULL;
+        platforms = (cl_platform_id*)malloc(ret_num_platforms * sizeof(cl_platform_id));
 
-    printf("\tOCL Device selected\n");
+        ret = clGetPlatformIDs(ret_num_platforms, platforms, NULL);
+        ret = clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_DEFAULT, 1, &device_id, &ret_num_devices);
 
-    cl_context_properties properties[] = {
-        CL_GL_CONTEXT_KHR, (cl_context_properties)wglGetCurrentContext(), // WGL Context
-        CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(), // WGL HDC
-        CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[0], // OpenCL platform
-        0
-    };
+        printf("\tOCL Device selected\n");
 
-    // Create a context using the supported devices
-    cl_context context = clCreateContext(properties, 1, &device_id, NULL, NULL, &ret);
+        cl_context_properties properties[] = {
+            CL_GL_CONTEXT_KHR, (cl_context_properties)wglGetCurrentContext(), // WGL Context
+            CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(), // WGL HDC
+            CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[0], // OpenCL platform
+            0
+        };
 
-    printf("\tOCL-OGL Context entwined\n");
+        // Create a context using the supported devices
+        cl_context context = clCreateContext(properties, 1, &device_id, NULL, NULL, &ret);
 
-    // Create a reference cl_mem object from GL buffer object
-    cl_vbo_pos = clCreateFromGLBuffer(context, CL_MEM_READ_WRITE, vbo[1], &ret);
-    cl_mbo_vel = clCreateBuffer(context, CL_MEM_READ_WRITE, cube_rel_pos.size() * sizeof(cl_float), NULL, &ret);
+        printf("\tOCL-OGL Context entwined\n");
 
-    command_queue = clCreateCommandQueue(context, device_id, 0, &ret);
-    ret = clEnqueueAcquireGLObjects(command_queue, 1, &cl_vbo_pos, 0, 0, 0);
+        // Create a reference cl_mem object from GL buffer object
+        cl_vbo_pos = clCreateFromGLBuffer(context, CL_MEM_READ_WRITE, vbo[1], &ret);
+        cl_mbo_vel = clCreateBuffer(context, CL_MEM_READ_WRITE, cube_rel_pos.size() * sizeof(cl_float), NULL, &ret);
 
-    //GLfloat *velocities = (GLfloat*)malloc(sizeof(GLfloat)*INSTANCES);
-    cl_float zeroF = 0.0f;   // initial value of each voxel in the volume
-    //ret = clEnqueueWriteBuffer(command_queue, cl_mbo_vel, CL_TRUE, 0, cube_rel_pos.size() * sizeof(GLfloat), NULL, 0, NULL, NULL);
-    ret = clEnqueueFillBuffer(command_queue, cl_mbo_vel, &zeroF, sizeof(cl_float), 0, cube_rel_pos.size() * sizeof(cl_float), 0, NULL, NULL);
-    //free(velocities);
+        command_queue = clCreateCommandQueue(context, device_id, 0, &ret);
+        ret = clEnqueueAcquireGLObjects(command_queue, 1, &cl_vbo_pos, 0, 0, 0);
 
-    printf("\tOCL - OGL Buffer shared and filled\n");
+        //GLfloat *velocities = (GLfloat*)malloc(sizeof(GLfloat)*INSTANCES);
+        cl_float zeroF = 0.0f;
+        //ret = clEnqueueWriteBuffer(command_queue, cl_mbo_vel, CL_TRUE, 0, cube_rel_pos.size() * sizeof(GLfloat), NULL, 0, NULL, NULL);
+        ret = clEnqueueFillBuffer(command_queue, cl_mbo_vel, &zeroF, sizeof(cl_float), 0, cube_rel_pos.size() * sizeof(cl_float), 0, NULL, NULL);
+        //free(velocities);
 
-    moveKernel = LoadKernel({ context, &device_id, "../Kernels/moveElements.cl", "moveElements" }, &ret);
-    //velocityKernel = LoadKernel({ context, &device_id, "../Kernels/applyVelocity.cl", "applyVelocity" }, &ret);
+        printf("\tOCL - OGL Buffer shared and filled\n");
+
+        moveKernel = LoadKernel({ context, &device_id, "../Kernels/moveElements.cl", "moveElements" }, &ret);
+        //velocityKernel = LoadKernel({ context, &device_id, "../Kernels/applyVelocity.cl", "applyVelocity" }, &ret);
     
-    ret = clSetKernelArg(moveKernel.kernel, 0, sizeof(cl_mem), (void *)&cl_vbo_pos);
-    ret = clSetKernelArg(moveKernel.kernel, 1, sizeof(cl_mem), (void *)&cl_mbo_vel);
+        ret = clSetKernelArg(moveKernel.kernel, 0, sizeof(cl_mem), (void *)&cl_vbo_pos);
+        ret = clSetKernelArg(moveKernel.kernel, 1, sizeof(cl_mem), (void *)&cl_mbo_vel);
 
-    float x = 0;
-    float y = 0;
-    float z = -10;
-    ret = clSetKernelArg(moveKernel.kernel, 2, sizeof(GLfloat), (void *)&x);
-    ret = clSetKernelArg(moveKernel.kernel, 3, sizeof(GLfloat), (void *)&y);
-    ret = clSetKernelArg(moveKernel.kernel, 4, sizeof(GLfloat), (void *)&z);
-    GLint instances = INSTANCES;
-    ret = clSetKernelArg(moveKernel.kernel, 7, sizeof(GLint), (void *)&instances);
+        ret = clSetKernelArg(moveKernel.kernel, 2, sizeof(GLfloat), (void *)&explosion_pos[0]);
+        ret = clSetKernelArg(moveKernel.kernel, 3, sizeof(GLfloat), (void *)&explosion_pos[1]);
+        ret = clSetKernelArg(moveKernel.kernel, 4, sizeof(GLfloat), (void *)&explosion_pos[2]);
+        GLint instances = INSTANCES;
+        ret = clSetKernelArg(moveKernel.kernel, 7, sizeof(GLint), (void *)&instances);
 
-    clFlush(command_queue);
-    printf("\tOCL - Kernel loaded and args setup\n");
-    printf("\tOCL Setup complete\n");
+        clFlush(command_queue);
+        printf("\tOCL - Kernel loaded and args setup\n");
+        printf("\tOCL Setup complete\n");
+    }
+#else
+    {
+        for (int32_t i = 0; i < INST_LENGTH; i++) {
+            for (int32_t j = 0; j < INST_LENGTH; j++) {
+                for (int32_t k = 0; k < INST_LENGTH; k++) {
+                    cube_vel.push_back(0.0f);
+                    cube_vel.push_back(0.0f);
+                    cube_vel.push_back(0.0f);
+                }
+            }
+        }
+    }
+#endif
 }
 
 void Demo_OGL_3OCL::OnRender() {
@@ -378,21 +393,62 @@ void Demo_OGL_3OCL::OnRender() {
     float dt = t - old_t;
     old_t = t;
 #if USE_OPENCL_KERNELS
-    ret = clEnqueueAcquireGLObjects(command_queue, 1, &cl_vbo_pos, 0, 0, 0);
-    if (explode) {
-        float amount = 50.0f;
-        ret = clSetKernelArg(moveKernel.kernel, 5, sizeof(GLfloat), (void *)&amount);
-        explode = false;
-    } else {
-        float amount = 0.0f;
-        ret = clSetKernelArg(moveKernel.kernel, 5, sizeof(GLfloat), (void *)&amount);
+    {
+        ret = clEnqueueAcquireGLObjects(command_queue, 1, &cl_vbo_pos, 0, 0, 0);
+        if (explode) {
+            float amount = 50.0f;
+            ret = clSetKernelArg(moveKernel.kernel, 5, sizeof(GLfloat), (void *)&amount);
+            explode = false;
+        } else {
+            float amount = 0.0f;
+            ret = clSetKernelArg(moveKernel.kernel, 5, sizeof(GLfloat), (void *)&amount);
+        }
+        if (renders++ < 10) printf("2 %f ::: %f\n", t, dt);
+        ret = clSetKernelArg(moveKernel.kernel, 6, sizeof(GLfloat), (void *)&dt);
+        ret = clEnqueueNDRangeKernel(command_queue, moveKernel.kernel, 1, NULL, &globalItemSize, NULL, 0, NULL, NULL);
+        ret = clEnqueueReleaseGLObjects(command_queue, 1, &cl_vbo_pos, 0, 0, 0);
+
+        clFlush(command_queue);
     }
-    if (renders++ < 10) printf("2 %f ::: %f\n", t, dt);
-    ret = clSetKernelArg(moveKernel.kernel, 6, sizeof(GLfloat), (void *)&dt);
-    ret = clEnqueueNDRangeKernel(command_queue, moveKernel.kernel, 1, NULL, &globalItemSize, NULL, 0, NULL, NULL);
-    ret = clEnqueueReleaseGLObjects(command_queue, 1, &cl_vbo_pos, 0, 0, 0);
-    
-    clFlush(command_queue);
+#else 
+    {
+        int j = 0;
+        float amount = 0.0f;
+        if (explode) {
+            amount = 50.0f;
+            explode = false;
+        }
+        for (int i = 0; i < INSTANCES; ++i) {
+            j = i * 3;
+            float velX = cube_vel[j];
+            float velY = cube_vel[j + 1];
+            float velZ = cube_vel[j + 2];
+            float posX = cube_rel_pos[j];
+            float posY = cube_rel_pos[j + 1];
+            float posZ = cube_rel_pos[j + 2];
+
+            // Do the operation
+            if (amount != 0) {
+                float xDist = posX - explosion_pos[0];
+                float yDist = posY - explosion_pos[1];
+                float zDist = posZ - explosion_pos[2];
+                float invDist = 1 / (xDist * xDist + yDist * yDist + zDist * zDist);
+                velX += invDist * xDist * amount;
+                velY += invDist * yDist * amount;
+                velZ += invDist * zDist * amount;
+            }
+
+            cube_rel_pos[j] = posX + (velX * dt);
+            cube_rel_pos[j + 1] = posY + (velY * dt);
+            cube_rel_pos[j + 2] = posZ + (velZ * dt);
+            cube_vel[j] = velX * (1 - dt * 0.2);
+            cube_vel[j + 1] = velY * (1 - dt * 0.2);
+            cube_vel[j + 2] = velZ * (1 - dt * 0.2);
+        }
+
+        glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+        glBufferData(GL_ARRAY_BUFFER, cube_rel_pos.size() * sizeof(GLfloat), cube_rel_pos.data(), GL_STATIC_DRAW);
+    }
 #endif
 
     // Limpiamos el buffer de profundidad (se pone al valor por defecto)
@@ -421,7 +477,6 @@ void Demo_OGL_3OCL::OnRender() {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo[0]);
 
 
-#define USE_PRIMITIVE_RESTART 1
 #if USE_PRIMITIVE_RESTART
     // When primitive restart is on, we can call one draw command
     // Le decimos que active el reinicio de primitivas,

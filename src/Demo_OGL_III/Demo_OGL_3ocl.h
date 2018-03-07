@@ -22,7 +22,8 @@
 #include <CL/cl_gl_ext.h>
 #endif
 
-#define USE_OPENCL_KERNELS false
+#define USE_PRIMITIVE_RESTART true
+#define USE_OPENCL_KERNELS true
 
 class Demo_OGL_3OCL {
 private:
@@ -33,7 +34,7 @@ private:
     static const uint32_t   WIN_HEIGHT = DEFAULT_WIN_HEIGHT;
     static const uint32_t   WIN_WIDTH  = DEFAULT_WIN_WIDTH;
     static const char*      WIN_TITLE; //px
-    static const int32_t    INST_LENGTH = 200;
+    static const int32_t    INST_LENGTH = 150;
     static const int32_t    INSTANCES = INST_LENGTH*INST_LENGTH*INST_LENGTH;
     Info_Manager info;
     /***************************************************/
@@ -46,6 +47,8 @@ private:
     static const GLfloat cube_colors[];
     static const GLushort cube_indices[];
     std::vector<GLfloat> cube_rel_pos;
+    std::vector<GLfloat> cube_vel;
+    vmath::vec3 explosion_pos;
 
     static const vmath::vec3 X;
     static const vmath::vec3 Y;
