@@ -22,6 +22,7 @@
 #include <CL/cl_gl_ext.h>
 #endif
 
+#define USE_OPENCL_KERNELS false
 
 class Demo_OGL_3OCL {
 private:
@@ -32,7 +33,7 @@ private:
     static const uint32_t   WIN_HEIGHT = DEFAULT_WIN_HEIGHT;
     static const uint32_t   WIN_WIDTH  = DEFAULT_WIN_WIDTH;
     static const char*      WIN_TITLE; //px
-    static const int32_t    INST_LENGTH = 50;
+    static const int32_t    INST_LENGTH = 200;
     static const int32_t    INSTANCES = INST_LENGTH*INST_LENGTH*INST_LENGTH;
     Info_Manager info;
     /***************************************************/

@@ -53,7 +53,8 @@ Demo_OGL_3OCL::Demo_OGL_3OCL() : running(false), window(NULL), ctxt(NULL), info(
             posX(0.0f), posY(0.0f), posZ(-2.0f), velocityXn(0.0f),
             velocityZn(0.0f), velocityYn(0.0f), velocityXp(0.0f),
             velocityZp(0.0f), velocityYp(0.0f),
-            lastFrameTime((GLfloat)GetTickCount()){
+            lastFrameTime((GLfloat)SDL_GetTicks() / 1000.0f),
+            explode(false) {
 	ebo[0] = vao[0] = vbo[0] = -1;
 	vbo[1] = -1;
 
@@ -333,15 +334,16 @@ void Demo_OGL_3OCL::InitCLData() {
 
     // Create a reference cl_mem object from GL buffer object
     cl_vbo_pos = clCreateFromGLBuffer(context, CL_MEM_READ_WRITE, vbo[1], &ret);
-    cl_mbo_vel = clCreateBuffer(context, CL_MEM_READ_WRITE, cube_rel_pos.size() * sizeof(GLfloat), NULL, &ret);
+    cl_mbo_vel = clCreateBuffer(context, CL_MEM_READ_WRITE, cube_rel_pos.size() * sizeof(cl_float), NULL, &ret);
 
     command_queue = clCreateCommandQueue(context, device_id, 0, &ret);
     ret = clEnqueueAcquireGLObjects(command_queue, 1, &cl_vbo_pos, 0, 0, 0);
 
-    GLfloat *velocities = (GLfloat*)malloc(sizeof(GLfloat)*INSTANCES);
-    memset(velocities, 0.0f, sizeof(GLfloat)*INSTANCES);
-    ret = clEnqueueWriteBuffer(command_queue, cl_mbo_vel, CL_TRUE, 0, cube_rel_pos.size() * sizeof(GLfloat), velocities, 0, NULL, NULL);
-    free(velocities);
+    //GLfloat *velocities = (GLfloat*)malloc(sizeof(GLfloat)*INSTANCES);
+    cl_float zeroF = 0.0f;   // initial value of each voxel in the volume
+    //ret = clEnqueueWriteBuffer(command_queue, cl_mbo_vel, CL_TRUE, 0, cube_rel_pos.size() * sizeof(GLfloat), NULL, 0, NULL, NULL);
+    ret = clEnqueueFillBuffer(command_queue, cl_mbo_vel, &zeroF, sizeof(cl_float), 0, cube_rel_pos.size() * sizeof(cl_float), 0, NULL, NULL);
+    //free(velocities);
 
     printf("\tOCL - OGL Buffer shared and filled\n");
 
@@ -356,43 +358,43 @@ void Demo_OGL_3OCL::InitCLData() {
     float z = -10;
     ret = clSetKernelArg(moveKernel.kernel, 2, sizeof(GLfloat), (void *)&x);
     ret = clSetKernelArg(moveKernel.kernel, 3, sizeof(GLfloat), (void *)&y);
-    ret = clSetKernelArg(moveKernel.kernel, 4, sizeof(GLfloat), (void *)&y);
+    ret = clSetKernelArg(moveKernel.kernel, 4, sizeof(GLfloat), (void *)&z);
     GLint instances = INSTANCES;
     ret = clSetKernelArg(moveKernel.kernel, 7, sizeof(GLint), (void *)&instances);
 
+    clFlush(command_queue);
     printf("\tOCL - Kernel loaded and args setup\n");
     printf("\tOCL Setup complete\n");
 }
 
 void Demo_OGL_3OCL::OnRender() {
+    static int renders = 0;
 
-    size_t global_item_size = INSTANCES; // Process the entire lists
-    size_t local_item_size = 64; // Divide work items into groups of 64
+    size_t globalItemSize = INSTANCES; // Process the entire lists
+    size_t localItemSize = 64; // Divide work items into groups of 64
     cl_int ret;
     // Un numero incremental en funcion del tiempo real
     float t = SDL_GetTicks() / 1000.0f;
     float dt = t - old_t;
     old_t = t;
-
-    glFlush();
+#if USE_OPENCL_KERNELS
+    ret = clEnqueueAcquireGLObjects(command_queue, 1, &cl_vbo_pos, 0, 0, 0);
     if (explode) {
-        float amount = 0.1f;
+        float amount = 50.0f;
         ret = clSetKernelArg(moveKernel.kernel, 5, sizeof(GLfloat), (void *)&amount);
         explode = false;
     } else {
         float amount = 0.0f;
         ret = clSetKernelArg(moveKernel.kernel, 5, sizeof(GLfloat), (void *)&amount);
     }
-    printf("2 %f ::: %f\n", t, dt);
+    if (renders++ < 10) printf("2 %f ::: %f\n", t, dt);
     ret = clSetKernelArg(moveKernel.kernel, 6, sizeof(GLfloat), (void *)&dt);
-    printf("3 %f ::: %f\n", t, dt);
-    ret = clEnqueueAcquireGLObjects(command_queue, 1, &cl_vbo_pos, 0, 0, 0);
-    printf("4 %f ::: %f\n", t, dt);
-    ret = clEnqueueNDRangeKernel(command_queue, moveKernel.kernel, 1, NULL, &global_item_size, NULL, 0, NULL, NULL);
-    printf("5 %f ::: %f\n", t, dt);
+    ret = clEnqueueNDRangeKernel(command_queue, moveKernel.kernel, 1, NULL, &globalItemSize, NULL, 0, NULL, NULL);
     ret = clEnqueueReleaseGLObjects(command_queue, 1, &cl_vbo_pos, 0, 0, 0);
-
     
+    clFlush(command_queue);
+#endif
+
     // Limpiamos el buffer de profundidad (se pone al valor por defecto)
     // y el de color (se pone al valor de glClearColor
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -440,6 +442,7 @@ void Demo_OGL_3OCL::OnRender() {
             (const GLvoid *)(9 * sizeof(GLushort)), INSTANCES);
 #endif
     // Buffer swap
+    glFlush();
     SDL_GL_SwapWindow(window);
 }
 

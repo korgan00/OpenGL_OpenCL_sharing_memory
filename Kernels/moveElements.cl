@@ -1,15 +1,18 @@
-__kernel void moveElements(__global float *pos,
+__kernel void moveElements( __global float *pos,
                             __global float *vel,
-                            float x,
-                            float y,
-                            float z,
-                            float amount,
-                            float dt,
-                            int instances) {
+                            __private float x,
+                            __private float y,
+                            __private float z,
+                            __private float amount,
+                            __private float dt,
+                            __private int instances) {
  
     // Get the index of the current element to be processed
-    
+
+
     int i = get_global_id(0)*3;
+    //printf("CL: %d\n", i);
+
 
     if (i > instances * 3) return;
 
@@ -34,8 +37,7 @@ __kernel void moveElements(__global float *pos,
     pos[i]      = posX + (velX * dt);
     pos[i + 1]  = posY + (velY * dt);
     pos[i + 2]  = posZ + (velZ * dt);
-    vel[i]      = velX * (1 - dt * 0.1);
-    vel[i + 1]  = velY * (1 - dt * 0.1);
-    vel[i + 2]  = velZ * (1 - dt * 0.1);
-    
+    vel[i]      = velX * (1 - dt * 0.2);
+    vel[i + 1]  = velY * (1 - dt * 0.2);
+    vel[i + 2]  = velZ * (1 - dt * 0.2);
 }
