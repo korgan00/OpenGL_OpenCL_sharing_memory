@@ -22,6 +22,10 @@ KernelObjects LoadKernel(KernelInfo info, cl_int* ret) {
     CHECK_KERNEL_ERROR;
 
     *ret = clBuildProgram(program, 1, info.device_id, NULL, NULL, NULL);
+    size_t len;
+    clGetProgramBuildInfo(program, *(info.device_id), CL_PROGRAM_BUILD_LOG, NULL, NULL, &len);
+    char *log = new char[len];
+    clGetProgramBuildInfo(program, *(info.device_id), CL_PROGRAM_BUILD_LOG, len, log, NULL);
     CHECK_KERNEL_ERROR;
 
     kernel = clCreateKernel(program, info.kernelName, ret);

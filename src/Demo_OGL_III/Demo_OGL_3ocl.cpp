@@ -15,7 +15,7 @@
 #include "Demo_OGL_3ocl.h"
 
 const char* Demo_OGL_3OCL::WIN_TITLE = "Titulo de la Ventana";
-const GLfloat Demo_OGL_3OCL::VELOCITY = 0.01f;
+const GLfloat Demo_OGL_3OCL::VELOCITY = 10.0f;
 
 const GLfloat Demo_OGL_3OCL::cube_positions[] = {
         -0.3f, -0.3f, -0.3f, 1.0f,
@@ -141,11 +141,11 @@ void Demo_OGL_3OCL::OnEvent(SDL_Event* event) {
     }
 }
 void Demo_OGL_3OCL::OnLoop() {
-    GLfloat now = (GLfloat)GetTickCount();
-    GLfloat elapsedTime = now - lastFrameTime;
-    posX += (velocityXp - velocityXn) * elapsedTime;
-    posZ += (velocityZp - velocityZn) * elapsedTime;
-    posY += (velocityYn - velocityYp) * elapsedTime;
+    GLfloat now = (GLfloat)SDL_GetTicks() / 1000.0f;
+    dt = now - lastFrameTime;
+    posX += (velocityXp - velocityXn) * dt;
+    posZ += (velocityZp - velocityZn) * dt;
+    posY += (velocityYn - velocityYp) * dt;
     lastFrameTime = now;
 }
 
@@ -172,7 +172,7 @@ bool Demo_OGL_3OCL::OnInit() {
         return false;
 
     SetupOpenGL();
-    InitData();
+    InitGLData();
     InitCLData();
 
     running = true;
@@ -180,6 +180,7 @@ bool Demo_OGL_3OCL::OnInit() {
 
     return true;
 }
+
 void Demo_OGL_3OCL::SetupOpenGL(){
 
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
@@ -196,7 +197,6 @@ void Demo_OGL_3OCL::SetupOpenGL(){
 		std::cout << "Opengl 4.3 no es soportado" << std:: endl;
 	}
 }
-
 
 int Demo_OGL_3OCL::OnExecute() {
     if (!Init())
@@ -219,7 +219,7 @@ int Demo_OGL_3OCL::OnExecute() {
     return 0;
 }
 
-void Demo_OGL_3OCL::InitData(){
+void Demo_OGL_3OCL::InitGLData(){
     printf("Initializing OGL Data\n");
     
     // Seleccionamos los shaders que queremos cargar
@@ -357,9 +357,9 @@ void Demo_OGL_3OCL::InitCLData() {
         ret = clSetKernelArg(moveKernel.kernel, 0, sizeof(cl_mem), (void *)&cl_vbo_pos);
         ret = clSetKernelArg(moveKernel.kernel, 1, sizeof(cl_mem), (void *)&cl_mbo_vel);
 
-        ret = clSetKernelArg(moveKernel.kernel, 2, sizeof(GLfloat), (void *)&explosion_pos[0]);
-        ret = clSetKernelArg(moveKernel.kernel, 3, sizeof(GLfloat), (void *)&explosion_pos[1]);
-        ret = clSetKernelArg(moveKernel.kernel, 4, sizeof(GLfloat), (void *)&explosion_pos[2]);
+        ret = clSetKernelArg(moveKernel.kernel, 2, sizeof(cl_float), (void *)&explosion_pos[0]);
+        ret = clSetKernelArg(moveKernel.kernel, 3, sizeof(cl_float), (void *)&explosion_pos[1]);
+        ret = clSetKernelArg(moveKernel.kernel, 4, sizeof(cl_float), (void *)&explosion_pos[2]);
         GLint instances = INSTANCES;
         ret = clSetKernelArg(moveKernel.kernel, 7, sizeof(GLint), (void *)&instances);
 
@@ -385,15 +385,12 @@ void Demo_OGL_3OCL::InitCLData() {
 void Demo_OGL_3OCL::OnRender() {
     static int renders = 0;
 
-    size_t globalItemSize = INSTANCES; // Process the entire lists
-    size_t localItemSize = 64; // Divide work items into groups of 64
-    cl_int ret;
-    // Un numero incremental en funcion del tiempo real
-    float t = SDL_GetTicks() / 1000.0f;
-    float dt = t - old_t;
-    old_t = t;
 #if USE_OPENCL_KERNELS
     {
+        size_t globalItemSize = INSTANCES; // Process the entire lists
+        size_t localItemSize = OPENCL_LOCAL_ITEM_SIZE; // Divide work items into groups of 64
+        cl_int ret;
+
         ret = clEnqueueAcquireGLObjects(command_queue, 1, &cl_vbo_pos, 0, 0, 0);
         if (explode) {
             float amount = 50.0f;
@@ -403,9 +400,12 @@ void Demo_OGL_3OCL::OnRender() {
             float amount = 0.0f;
             ret = clSetKernelArg(moveKernel.kernel, 5, sizeof(GLfloat), (void *)&amount);
         }
-        if (renders++ < 10) printf("2 %f ::: %f\n", t, dt);
+        if (renders++ < 10) printf("%d\n", CL_DEVICE_MAX_WORK_ITEM_SIZES);
         ret = clSetKernelArg(moveKernel.kernel, 6, sizeof(GLfloat), (void *)&dt);
         ret = clEnqueueNDRangeKernel(command_queue, moveKernel.kernel, 1, NULL, &globalItemSize, NULL, 0, NULL, NULL);
+        if (ret == -54) {
+            printf("work groups: %f\n", (float)INSTANCES / (float)OPENCL_LOCAL_ITEM_SIZE);
+        }
         ret = clEnqueueReleaseGLObjects(command_queue, 1, &cl_vbo_pos, 0, 0, 0);
 
         clFlush(command_queue);
@@ -460,8 +460,8 @@ void Demo_OGL_3OCL::OnRender() {
 
     // Calculamos la matriz modelo
     vmath::mat4 model_matrix(vmath::translate(posX, posY, posZ) *
-                                vmath::rotate(t * 0.1f * 360.0f, Y) *
-                                vmath::rotate(t * 0.1f * 720.0f, Z));
+                                vmath::rotate(lastFrameTime * 36.0f, Y) *
+                                vmath::rotate(lastFrameTime * 72.0f, Z));
 
     // Calculamos la matriz de proyección mediante un frustum
     vmath::mat4 projection_matrix(vmath::frustum(-1.0f, 1.0f, -aspect, aspect, 1.0f, 500.0f));

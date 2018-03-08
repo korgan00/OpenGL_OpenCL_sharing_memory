@@ -24,6 +24,7 @@
 
 #define USE_PRIMITIVE_RESTART true
 #define USE_OPENCL_KERNELS true
+#define OPENCL_LOCAL_ITEM_SIZE 1000
 
 class Demo_OGL_3OCL {
 private:
@@ -34,7 +35,7 @@ private:
     static const uint32_t   WIN_HEIGHT = DEFAULT_WIN_HEIGHT;
     static const uint32_t   WIN_WIDTH  = DEFAULT_WIN_WIDTH;
     static const char*      WIN_TITLE; //px
-    static const int32_t    INST_LENGTH = 150;
+    static const int32_t    INST_LENGTH = 50;
     static const int32_t    INSTANCES = INST_LENGTH*INST_LENGTH*INST_LENGTH;
     Info_Manager info;
     /***************************************************/
@@ -78,6 +79,7 @@ private:
     GLfloat velocityZp;
     GLfloat velocityYp;
     GLfloat lastFrameTime;
+    GLfloat dt;
     GLboolean explode;
     float old_t;
 
@@ -109,7 +111,7 @@ public:
     /***************************************************/
 
     void SetupOpenGL();
-    void InitData();
+    void InitGLData();
     void InitCLData();
 
     void CheckErr();
